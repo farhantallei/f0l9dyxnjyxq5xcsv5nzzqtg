@@ -1,0 +1,19 @@
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.transactionRoutes = void 0;
+const sale_routes_1 = require("./sale/sale.routes");
+const admin_1 = require("../../../middleware/admin");
+const transactionRoutes = (route) => __awaiter(void 0, void 0, void 0, function* () {
+    route.addHook('preHandler', admin_1.AuthenticationHandler);
+    route.register(sale_routes_1.saleRoutes, { prefix: 'sale' });
+});
+exports.transactionRoutes = transactionRoutes;

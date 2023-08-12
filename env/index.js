@@ -1,0 +1,20 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.NODE_ENV = exports.ACCOUNT_DELETION_TOKEN_SECRET = exports.AGRONOM_REFRESH_TOKEN_SECRET = exports.AGRONOM_ACCESS_TOKEN_SECRET = exports.FARMER_ACTIVATION_TOKEN_SECRET = exports.FARMER_ACCESS_TOKEN_SECRET = exports.CLIENT_ACTIVATION_TOKEN_SECRET = exports.CLIENT_ACCESS_TOKEN_SECRET = exports.ADMIN_REFRESH_TOKEN_SECRET = exports.ADMIN_ACCESS_TOKEN_SECRET = exports.COOKIE_SECRET = exports.PORT = void 0;
+const dotenv_1 = __importDefault(require("dotenv"));
+dotenv_1.default.config();
+exports.PORT = process.env.PORT;
+exports.COOKIE_SECRET = process.env.COOKIE_SECRET;
+exports.ADMIN_ACCESS_TOKEN_SECRET = process.env.ADMIN_ACCESS_TOKEN_SECRET;
+exports.ADMIN_REFRESH_TOKEN_SECRET = process.env.ADMIN_REFRESH_TOKEN_SECRET;
+exports.CLIENT_ACCESS_TOKEN_SECRET = process.env.CLIENT_ACCESS_TOKEN_SECRET;
+exports.CLIENT_ACTIVATION_TOKEN_SECRET = process.env.CLIENT_ACTIVATION_TOKEN_SECRET;
+exports.FARMER_ACCESS_TOKEN_SECRET = process.env.FARMER_ACCESS_TOKEN_SECRET;
+exports.FARMER_ACTIVATION_TOKEN_SECRET = process.env.FARMER_ACTIVATION_TOKEN_SECRET;
+exports.AGRONOM_ACCESS_TOKEN_SECRET = process.env.AGRONOM_ACCESS_TOKEN_SECRET;
+exports.AGRONOM_REFRESH_TOKEN_SECRET = process.env.AGRONOM_REFRESH_TOKEN_SECRET;
+exports.ACCOUNT_DELETION_TOKEN_SECRET = process.env.ACCOUNT_DELETION_TOKEN_SECRET;
+exports.NODE_ENV = process.env.NODE_ENV;

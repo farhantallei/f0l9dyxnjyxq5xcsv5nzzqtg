@@ -1,0 +1,1093 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id           Int      @id @default(autoincrement())
+  outletId     Int
+  name         String
+  username     String   @unique
+  email        String   @unique
+  mobile       String   @unique
+  passwordHash String   @map("password")
+  profileUrl   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  messages AdminMessage[]
+
+  outlet Outlet @relation(fields: [outletId], references: [id])
+}
+
+// TODO: bikin token untuk admin. tidak boleh login satu admin oleh dua device
+
+enum AdminMessageType {
+  text
+  image
+  bid
+}
+
+model AdminMessage {
+  id        Int              @id @default(autoincrement())
+  inboxId   Int
+  adminId   Int
+  type      AdminMessageType
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  content AdminMessageContent?
+  bid     AdminMessageBid?
+
+  inbox UserInbox @relation(fields: [inboxId], references: [id])
+  admin Admin     @relation(fields: [adminId], references: [id])
+}
+
+model AdminMessageContent {
+  messageId Int    @id
+  content   String
+
+  message AdminMessage @relation(fields: [messageId], references: [id])
+}
+
+model AdminMessageBid {
+  messageId Int     @id
+  productId Int
+  price     Decimal @db.Money
+  accepted  Boolean @default(false)
+
+  message AdminMessage @relation(fields: [messageId], references: [id])
+  product UserProduct  @relation(fields: [productId], references: [id])
+}
+
+model Agronom {
+  id           Int      @id @default(autoincrement())
+  specialistId Int
+  name         String
+  email        String   @unique
+  mobile       String   @unique
+  passwordHash String   @map("password")
+  university   String
+  experience   Decimal
+  description  String?
+  profileUrl   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  specialist AgronomSpecialist @relation(fields: [specialistId], references: [id])
+
+  likes         AgronomLike[]
+  consultations UserConsultation[]
+  messages      UserConsultationMessage[]
+  // messages      AgronomConsultationMessage[]
+  appointments  AgronomAppointment[]
+}
+
+model AgronomSpecialist {
+  id         Int    @id @default(autoincrement())
+  specialist String @unique
+
+  agronoms Agronom[]
+}
+
+model AgronomLike {
+  userId    Int
+  agronomId Int
+  like      Boolean
+
+  user    User    @relation(fields: [userId], references: [id])
+  agronom Agronom @relation(fields: [agronomId], references: [id])
+
+  @@id([userId, agronomId])
+}
+
+enum AgronomAppointmentStatus {
+  requested
+  accepted
+  completed
+  rejected
+}
+
+model AgronomAppointment {
+  id        Int                      @id @default(autoincrement())
+  agronomId Int
+  userId    Int
+  time      DateTime
+  status    AgronomAppointmentStatus @default(requested)
+  createdAt DateTime                 @default(now())
+
+  sessionLog AgronomAppointmentSessionLog[]
+
+  agronom Agronom @relation(fields: [agronomId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+}
+
+enum AgronomAppointmentSessionRole {
+  agronom
+  user
+}
+
+enum AgronomAppointmentSessionStatus {
+  enter
+  leave
+}
+
+model AgronomAppointmentSessionLog {
+  id            Int                             @id @default(autoincrement())
+  appointmentId Int
+  role          AgronomAppointmentSessionRole
+  status        AgronomAppointmentSessionStatus
+  createdAt     DateTime                        @default(now())
+
+  appointment AgronomAppointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+}
+
+enum UserStatus {
+  active
+  non_active
+  under_deletion
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  name         String
+  email        String     @unique
+  mobile       String     @unique
+  passwordHash String     @map("password")
+  profileUrl   String?
+  status       UserStatus @default(non_active)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  sessions                  UserSession[]
+  addresses                 UserAddress[]
+  productReviews            ProductReview[]
+  productOrders             ProductOrder[]
+  products                  UserProduct[]
+  productCarts              ProductCartsOnUsers[]
+  productFavorites          ProductFavoritesOnUsers[]
+  productOrderNotifications ProductOrderNotification[]
+  alsintanReviews           AlsintanReview[]
+  alsintanOrders            AlsintanOrder[]
+  userProductNotifications  UserProductNotification[]
+  messages                  UserMessage[]
+  inboxes                   UserInbox[]
+  likes                     AgronomLike[]
+  consultations             UserConsultation[]
+  consultationMessages      UserConsultationMessage[]
+  appointments              AgronomAppointment[]
+  affiliate                 UserAffiliate?
+}
+
+model UserSession {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  userAgent    String
+  latitude     Decimal
+  longitude    Decimal
+  secret       String
+  lastLoggedIn DateTime @default(now())
+  lastActivity DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserConsultation {
+  id        String @id
+  userId    Int
+  agronomId Int
+
+  user    User    @relation(fields: [userId], references: [id])
+  agronom Agronom @relation(fields: [agronomId], references: [id])
+
+  messages UserConsultationMessage[]
+  // agronomMessage AgronomConsultationMessage[]
+
+  @@unique([userId, agronomId])
+}
+
+enum UserConsultationMessageType {
+  text
+  image
+}
+
+model UserConsultationMessage {
+  id             Int                         @id @default(autoincrement())
+  consultationId String
+  userId         Int?
+  agronomId      Int?
+  type           UserConsultationMessageType
+  content        String
+  readAt         DateTime?
+  createdAt      DateTime                    @default(now())
+
+  consultation UserConsultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+  user         User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agronom      Agronom?         @relation(fields: [agronomId], references: [id], onDelete: Cascade)
+}
+
+model UserInbox {
+  id       Int @id @default(autoincrement())
+  userId   Int
+  outletId Int
+
+  user   User   @relation(fields: [userId], references: [id])
+  outlet Outlet @relation(fields: [outletId], references: [id])
+
+  userMessages  UserMessage[]
+  adminMessages AdminMessage[]
+
+  @@unique([userId, outletId])
+}
+
+enum UserMessageType {
+  text
+  image
+  bid
+  product
+}
+
+// FIXME: Merge user & admin message jadi 1 table
+model UserMessage {
+  id        Int             @id @default(autoincrement())
+  inboxId   Int
+  userId    Int
+  type      UserMessageType
+  readAt    DateTime?
+  createdAt DateTime        @default(now())
+
+  content UserMessageContent?
+  bid     UserMessageBid?
+  product UserMessageProduct?
+
+  inbox UserInbox @relation(fields: [inboxId], references: [id])
+  user  User      @relation(fields: [userId], references: [id])
+}
+
+model UserMessageContent {
+  messageId Int    @id
+  content   String
+
+  message UserMessage @relation(fields: [messageId], references: [id])
+}
+
+model UserMessageBid {
+  messageId Int     @id
+  productId Int
+  price     Decimal @db.Money
+  accepted  Boolean @default(false)
+
+  message UserMessage @relation(fields: [messageId], references: [id])
+  product UserProduct @relation(fields: [productId], references: [id])
+}
+
+model UserMessageProduct {
+  messageId Int    @id
+  productId Int
+  text      String
+
+  message UserMessage @relation(fields: [messageId], references: [id])
+  product Product     @relation(fields: [productId], references: [id])
+}
+
+enum UserProductStatus {
+  requested
+  approved
+  pickup
+  rejected
+  complete
+}
+
+model UserProduct {
+  id          Int               @id @default(autoincrement())
+  invoice     Int               @unique @default(autoincrement())
+  userId      Int
+  name        String
+  description String
+  price       Decimal           @db.Money
+  weight      Decimal
+  status      UserProductStatus @default(requested)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  images        UserProductImage[]
+  notifications UserProductNotification[]
+  statusLogs    UserProductStatusLog[]
+  userBids      UserMessageBid[]
+  adminBids     AdminMessageBid[]
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserProductImage {
+  id        Int    @id @default(autoincrement())
+  productId Int
+  url       String
+  sequence  Int    @db.SmallInt
+
+  product UserProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, sequence])
+}
+
+enum UserProductNotificationType {
+  approved
+  pickup
+  rejected
+  received
+}
+
+model UserProductNotification {
+  id        Int                         @id @default(autoincrement())
+  userId    Int
+  productId Int
+  type      UserProductNotificationType
+  readAt    DateTime?
+  createdAt DateTime                    @default(now())
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product UserProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model UserProductStatusLog {
+  id        Int               @id @default(autoincrement())
+  productId Int
+  status    UserProductStatus
+  createdAt DateTime          @default(now())
+
+  order UserProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model UserAddress {
+  id         Int     @id @default(autoincrement())
+  userId     Int
+  provinceId Int     @db.SmallInt
+  regencyId  Int     @db.SmallInt
+  districtId Int     @db.SmallInt
+  villageId  Int     @db.SmallInt
+  name       String
+  mobile     String
+  address    String
+  // zipCode    String
+  main       Boolean
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  province Province @relation(fields: [provinceId], references: [provinceId])
+  regency  Regency  @relation(fields: [provinceId, regencyId], references: [provinceId, regencyId])
+  district District @relation(fields: [provinceId, regencyId, districtId], references: [provinceId, regencyId, districtId])
+  village  Village  @relation(fields: [provinceId, regencyId, districtId, villageId], references: [provinceId, regencyId, districtId, villageId])
+}
+
+model Province {
+  provinceId Int    @id @db.SmallInt
+  name       String
+
+  regencies   Regency[]
+  districts   District[]
+  villages    Village[]
+  postalCodes RegionsOnPostalCodes[]
+  addresses   UserAddress[]
+}
+
+model Regency {
+  provinceId Int    @db.SmallInt
+  regencyId  Int    @db.SmallInt
+  name       String
+
+  districts   District[]
+  villages    Village[]
+  postalCodes RegionsOnPostalCodes[]
+  addresses   UserAddress[]
+
+  province Province @relation(fields: [provinceId], references: [provinceId])
+
+  @@id([provinceId, regencyId])
+}
+
+model District {
+  provinceId Int    @db.SmallInt
+  regencyId  Int    @db.SmallInt
+  districtId Int    @db.SmallInt
+  name       String
+
+  villages    Village[]
+  postalCodes RegionsOnPostalCodes[]
+  addresses   UserAddress[]
+
+  province Province @relation(fields: [provinceId], references: [provinceId])
+  regency  Regency  @relation(fields: [provinceId, regencyId], references: [provinceId, regencyId])
+
+  @@id([provinceId, regencyId, districtId])
+}
+
+model Village {
+  provinceId Int    @db.SmallInt
+  regencyId  Int    @db.SmallInt
+  districtId Int    @db.SmallInt
+  villageId  Int    @db.SmallInt
+  name       String
+
+  postalCodes RegionsOnPostalCodes[]
+  addresses   UserAddress[]
+
+  province Province @relation(fields: [provinceId], references: [provinceId])
+  regency  Regency  @relation(fields: [provinceId, regencyId], references: [provinceId, regencyId])
+  district District @relation(fields: [provinceId, regencyId, districtId], references: [provinceId, regencyId, districtId])
+
+  @@id([provinceId, regencyId, districtId, villageId])
+}
+
+model PostalCode {
+  id   Int    @id @db.SmallInt
+  code String
+
+  regions RegionsOnPostalCodes[]
+}
+
+model RegionsOnPostalCodes {
+  provinceId   Int @db.SmallInt
+  regencyId    Int @db.SmallInt
+  districtId   Int @db.SmallInt
+  villageId    Int @db.SmallInt
+  postalCodeId Int @db.SmallInt
+
+  province   Province   @relation(fields: [provinceId], references: [provinceId])
+  regency    Regency    @relation(fields: [provinceId, regencyId], references: [provinceId, regencyId])
+  district   District   @relation(fields: [provinceId, regencyId, districtId], references: [provinceId, regencyId, districtId])
+  village    Village    @relation(fields: [provinceId, regencyId, districtId, villageId], references: [provinceId, regencyId, districtId, villageId])
+  postalCode PostalCode @relation(fields: [postalCodeId], references: [id])
+
+  @@id([provinceId, regencyId, districtId, villageId, postalCodeId])
+}
+
+model Outlet {
+  id         Int     @id @default(autoincrement())
+  name       String
+  address    String
+  province   String
+  regency    String
+  district   String
+  village    String
+  zipCode    String
+  center     Boolean @default(false)
+  profileUrl String?
+
+  products      ProductsOnOutlets[]
+  productOrders ProductOrder[]
+  productCarts  ProductCartsOnUsers[]
+  admins        Admin[]
+  inboxes       UserInbox[]
+}
+
+model ProductBrand {
+  id    Int    @id @default(autoincrement())
+  brand String
+
+  products Product[]
+}
+
+model ProductCategory {
+  id       Int    @id @default(autoincrement())
+  category String
+
+  products Product[]
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  brandId     Int
+  categoryId  Int
+  name        String
+  description String
+  price       Decimal  @db.Money
+  type        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  outlets         ProductsOnOutlets[]
+  images          ProductImage[]
+  reviews         ProductReview[]
+  orders          ProductOrderItem[]
+  carts           ProductCartsOnUsers[]
+  favorites       ProductFavoritesOnUsers[]
+  productMessages UserMessageProduct[]
+
+  brand    ProductBrand    @relation(fields: [brandId], references: [id])
+  category ProductCategory @relation(fields: [categoryId], references: [id])
+}
+
+model ProductsOnOutlets {
+  outletId  Int
+  productId Int
+  stock     Int @db.SmallInt
+
+  outlet  Outlet  @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([outletId, productId])
+}
+
+model ProductImage {
+  id        Int    @id @default(autoincrement())
+  productId Int
+  url       String
+  sequence  Int    @db.SmallInt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, sequence])
+}
+
+model ProductReview {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  productId Int
+  rating    Int
+  review    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  images ProductReviewImage[]
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+}
+
+model ProductReviewImage {
+  id       Int    @id @default(autoincrement())
+  reviewId Int
+  url      String
+
+  review ProductReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+}
+
+enum ProductOrderStatus {
+  checkout
+  // paid
+  shipped
+  canceled
+  complete
+}
+
+enum ProductShipment {
+  cod
+}
+
+enum ProductPaymentMethod {
+  cash
+}
+
+model ProductOrder {
+  id            Int                  @id @default(autoincrement())
+  // invoice         Int                  @unique @default(autoincrement())
+  userId        Int
+  outletId      Int
+  status        ProductOrderStatus   @default(checkout)
+  address       String
+  shipment      ProductShipment
+  paymentMethod ProductPaymentMethod
+  subtotal      Decimal              @db.Money
+  discount      Decimal              @db.Money
+  // shipmentService Decimal              @db.Money
+  // adminService    Decimal              @db.Money
+  total         Decimal              @db.Money
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  // transaction   ProductOrderTransaction?
+  items         ProductOrderItem[]
+  notifications ProductOrderNotification[]
+  statusLogs    ProductOrderStatusLog[]
+  invoice       ProductInvoice?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  outlet Outlet @relation(fields: [outletId], references: [id])
+}
+
+model ProductOrderItem {
+  orderId   Int
+  productId Int
+  quantity  Int     @db.SmallInt
+  price     Decimal @db.Money
+
+  order   ProductOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product      @relation(fields: [productId], references: [id])
+
+  @@id([orderId, productId])
+}
+
+model ProductInvoice {
+  id        Int      @id @default(autoincrement())
+  orderId   Int      @unique
+  invoice   String   @unique // Format: {yyddmm}/ECM/{no.invoice}
+  createdAt DateTime @default(now())
+
+  order ProductOrder @relation(fields: [orderId], references: [id])
+}
+
+// model ProductOrderTransaction {
+//   id          Int       @id @default(autoincrement())
+//   orderId     Int       @unique
+//   paymentDate DateTime?
+//   createdAt   DateTime  @default(now())
+
+//   order ProductOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+// }
+
+enum ProductOrderNotificationType {
+  purchase
+  delivery
+  arrived
+}
+
+model ProductOrderNotification {
+  id        Int                          @id @default(autoincrement())
+  userId    Int
+  orderId   Int
+  type      ProductOrderNotificationType
+  readAt    DateTime?
+  createdAt DateTime                     @default(now())
+
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order ProductOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model ProductOrderStatusLog {
+  id        Int                @id @default(autoincrement())
+  orderId   Int
+  status    ProductOrderStatus
+  createdAt DateTime           @default(now())
+
+  order ProductOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model ProductCartsOnUsers {
+  userId    Int
+  productId Int
+  outletId  Int
+  quantity  Int      @db.SmallInt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  outlet  Outlet  @relation(fields: [outletId], references: [id], onDelete: Cascade)
+
+  @@id([userId, productId, outletId])
+}
+
+model ProductFavoritesOnUsers {
+  userId    Int
+  productId Int
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@id([userId, productId])
+}
+
+model AlsintanCategory {
+  id       Int    @id @default(autoincrement())
+  category String
+
+  alsintans Alsintan[]
+}
+
+enum AlsintanRentalType {
+  daily
+  plotly
+}
+
+model Alsintan {
+  id          Int                @id @default(autoincrement())
+  categoryId  Int
+  name        String
+  description String
+  price       Decimal            @db.Money
+  rentalType  AlsintanRentalType
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  images  AlsintanImage[]
+  reviews AlsintanReview[]
+  orders  AlsintanOrder[]
+
+  category AlsintanCategory @relation(fields: [categoryId], references: [id])
+}
+
+model AlsintanImage {
+  id         Int    @id @default(autoincrement())
+  alsintanId Int
+  url        String
+  sequence   Int    @db.SmallInt
+
+  alsintan Alsintan @relation(fields: [alsintanId], references: [id], onDelete: Cascade)
+
+  @@unique([alsintanId, sequence])
+}
+
+model AlsintanReview {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  alsintanId Int
+  rating     Int
+  review     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  images AlsintanReviewImage[]
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alsintan Alsintan @relation(fields: [alsintanId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, alsintanId])
+}
+
+model AlsintanReviewImage {
+  id       Int    @id @default(autoincrement())
+  reviewId Int
+  url      String
+
+  review AlsintanReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+}
+
+enum AlsintanOrderStatus {
+  requested
+  approved
+  rented
+  completed
+  canceled
+}
+
+enum AlsintanPaymentMethod {
+  cash
+  bank_transfer
+}
+
+enum AlsintanPaymentStatus {
+  not_paid
+  pending_verification
+  completed
+}
+
+model AlsintanOrder {
+  id                Int                 @id @default(autoincrement())
+  userId            Int
+  alsintanId        Int
+  price             Decimal             @db.Money
+  status            AlsintanOrderStatus @default(requested)
+  from              DateTime            @db.Date
+  to                DateTime?           @db.Date
+  plot              Int?                @db.SmallInt
+  landAreaTotal     Int                 @db.SmallInt
+  landAddress       String
+  homeAddress       String
+  homeAddressName   String
+  homeAddressMobile String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  statusLogs AlsintanOrderStatusLog[]
+  invoice    AlsintanInvoice?
+
+  user     User     @relation(fields: [userId], references: [id])
+  alsintan Alsintan @relation(fields: [alsintanId], references: [id])
+}
+
+model AlsintanOrderStatusLog {
+  id        Int                 @id @default(autoincrement())
+  orderId   Int
+  status    AlsintanOrderStatus
+  createdAt DateTime            @default(now())
+
+  order AlsintanOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model AlsintanInvoice {
+  id            Int                   @id @default(autoincrement())
+  orderId       Int                   @unique
+  invoice       String                @unique // Format: {yyddmm}/ALS/{no.order}
+  status        AlsintanPaymentStatus @default(not_paid)
+  paymentMethod AlsintanPaymentMethod
+  subtotal      Decimal               @db.Money
+  discount      Decimal               @db.Money
+  total         Decimal               @db.Money
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  statusLogs AlsintanInvoiceStatusLog[]
+
+  order AlsintanOrder @relation(fields: [orderId], references: [id])
+}
+
+model AlsintanInvoiceStatusLog {
+  id        Int                   @id @default(autoincrement())
+  invoiceId Int
+  status    AlsintanPaymentStatus
+  createdAt DateTime              @default(now())
+
+  invoice AlsintanInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+enum Page {
+  client_agronom
+  client_e_commerce
+  agronom_home
+}
+
+model Banner {
+  id          Int    @id @default(autoincrement())
+  title       String
+  description String
+  url         String
+  page        Page
+}
+
+model PromotionSchedule {
+  id          Int    @id @default(autoincrement())
+  title       String
+  description String
+  url         String
+}
+
+// enum FarmerStatus {
+//   active
+//   non_active
+// }
+
+// enum IFSStatus {
+//   not_verified
+//   verified
+// }
+
+enum CropCommodity {
+  padi
+  jagung
+}
+
+model UserAffiliate {
+  id              Int     @id @default(autoincrement())
+  userId          Int     @unique
+  name            String
+  email           String  @unique
+  mobile          String  @unique
+  verified        Boolean @default(false)
+  profileImage    String?
+  ktpAddress      String?
+  domicileAddress String?
+  ktpImage        String?
+  kkImage         String?
+  ktpNumber       String?
+  kkNumber        String?
+
+  community UserAffiliateCommunity?
+  land      UserAffiliateLand?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserAffiliateCommunity {
+  id                Int    @id @default(autoincrement())
+  affiliateId       Int    @unique
+  name              String
+  address           String
+  memberTotal       Int    @db.SmallInt
+  potentialLandArea Int    @db.SmallInt
+
+  cropCommodities UserAffiliateCommunityCropCommodity[]
+  members         UserAffiliateCommunityMember[]
+
+  affiliate UserAffiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+}
+
+model UserAffiliateCommunityCropCommodity {
+  communityId   Int
+  cropCommodity CropCommodity
+
+  community UserAffiliateCommunity @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@id([communityId, cropCommodity])
+}
+
+model UserAffiliateLand {
+  id                 Int    @id @default(autoincrement())
+  affiliateId        Int    @unique
+  address            String
+  landAreaTotal      Int    @db.SmallInt
+  landAreaRegistered Int    @db.SmallInt
+
+  cropCommodities UserAffiliateLandCropCommodity[]
+
+  affiliate UserAffiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+}
+
+model UserAffiliateLandCropCommodity {
+  landId        Int
+  cropCommodity CropCommodity
+
+  land UserAffiliateLand @relation(fields: [landId], references: [id], onDelete: Cascade)
+
+  @@id([landId, cropCommodity])
+}
+
+model UserAffiliateCommunityMember {
+  id              Int     @id @default(autoincrement())
+  communityId     Int
+  name            String
+  profileImage    String?
+  ktpAddress      String
+  domicileAddress String
+  ktpImage        String
+  kkImage         String
+  ktpNumber       String
+  kkNumber        String
+
+  savingsBook UserAffiliateCommunityMemberSavingsBook?
+  land        UserAffiliateCommunityMemberLand?
+
+  community UserAffiliateCommunity @relation(fields: [communityId], references: [id], onDelete: Cascade)
+}
+
+model UserAffiliateCommunityMemberSavingsBook {
+  id            Int    @id @default(autoincrement())
+  memberId      Int    @unique
+  bankId        Int    @db.SmallInt
+  accountNumber String @unique
+  accountHolder String
+  image         String
+
+  bank   Bank                         @relation(fields: [bankId], references: [id])
+  member UserAffiliateCommunityMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+model UserAffiliateCommunityMemberLand {
+  id                 Int    @id @default(autoincrement())
+  memberId           Int    @unique
+  address            String
+  landAreaTotal      Int    @db.SmallInt
+  landAreaRegistered Int    @db.SmallInt
+
+  cropCommodities UserAffiliateCommunityMemberLandCropCommodity[]
+
+  member UserAffiliateCommunityMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+model UserAffiliateCommunityMemberLandCropCommodity {
+  landId        Int
+  cropCommodity CropCommodity
+
+  land UserAffiliateCommunityMemberLand @relation(fields: [landId], references: [id], onDelete: Cascade)
+
+  @@id([landId, cropCommodity])
+}
+
+model Bank {
+  id   Int    @id @db.SmallInt
+  name String
+  code String
+
+  accounts                             BankAccount[]
+  affiliateCommunityMemberSavingsBooks UserAffiliateCommunityMemberSavingsBook[]
+}
+
+model BankAccount {
+  id     Int    @id @default(autoincrement())
+  bankId Int    @db.SmallInt
+  name   String
+  number String @unique
+
+  bank Bank @relation(fields: [bankId], references: [id])
+}
+
+// model Farmer {
+//   id           Int          @id @default(autoincrement())
+//   name         String
+//   email        String       @unique
+//   mobile       String       @unique
+//   passwordHash String       @map("password")
+//   status       FarmerStatus @default(non_active)
+//   IFSStatus    IFSStatus    @default(not_verified)
+//   createdAt    DateTime     @default(now())
+//   updatedAt    DateTime     @updatedAt
+
+//   sessions    FarmerSession[]
+//   IFS         IFS[]
+//   kawanOrtani KawanOrtani[]
+// }
+
+// model FarmerSession {
+//   id           Int      @id @default(autoincrement())
+//   farmerId     Int
+//   device       String
+//   latitude     Decimal
+//   longitude    Decimal
+//   secret       String
+//   ipAddress    String
+//   lastLoggedIn DateTime @default(now())
+//   lastActivity DateTime @default(now())
+//   createdAt    DateTime @default(now())
+
+//   farmer Farmer @relation(fields: [farmerId], references: [id])
+// }
+
+// model IFS {
+//   id                 Int    @id @default(autoincrement())
+//   farmerId           Int    @unique
+//   ktpAddress         String
+//   domicileAddress    String
+//   landAddress        String
+//   totalLandArea      Int    @db.SmallInt
+//   registeredLandArea Int    @db.SmallInt
+//   ktpNumber          String @unique
+//   ktpUrl             String
+//   kkNumber           String
+//   kkUrl              String
+//   passportPhotoUrl   String
+
+//   IFSCropCommodities IFSCropCommodity[]
+//   kawanOrtani        KawanOrtaniMember?
+
+//   farmer Farmer @relation(fields: [farmerId], references: [id])
+// }
+
+// model IFSCropCommodity {
+//   memberId      Int
+//   cropCommodity CropCommodity
+
+//   member IFS @relation(fields: [memberId], references: [id])
+
+//   @@id([memberId, cropCommodity])
+// }
+
+// model KawanOrtani {
+//   id                Int    @id @default(autoincrement())
+//   leaderId          Int    @unique
+//   communityName     String
+//   communityAddress  String
+//   potentialLandArea Int    @db.SmallInt
+
+//   members KawanOrtaniMember[]
+
+//   leader Farmer @relation(fields: [leaderId], references: [id])
+// }
+
+// model KawanOrtaniMember {
+//   kawanOrtaniId Int
+//   IFSId         Int @unique
+
+//   kawanOrtani KawanOrtani @relation(fields: [kawanOrtaniId], references: [id])
+//   IFS         IFS         @relation(fields: [IFSId], references: [id])
+
+//   @@id([kawanOrtaniId, IFSId])
+// }

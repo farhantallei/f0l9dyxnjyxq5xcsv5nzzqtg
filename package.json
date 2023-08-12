@@ -1,0 +1,31 @@
+{
+  "name": "ortani-api",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "postinstall": "npx prisma generate",
+    "start": "node main.js"
+  },
+  "engines": {
+    "npm": ">=8.0.0 <9.0.0",
+    "node": ">=16.5.0 <17.0.0"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^8.3.0",
+    "@fastify/cors": "^8.3.0",
+    "@fastify/sensible": "^5.2.0",
+    "@fastify/static": "^6.10.2",
+    "@fastify/swagger": "^8.8.0",
+    "@fastify/swagger-ui": "^1.9.3",
+    "@fastify/type-provider-typebox": "^3.3.0",
+    "@paralleldrive/cuid2": "^2.2.1",
+    "@prisma/client": "^5.0.0",
+    "@socket.io/admin-ui": "^0.5.1",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.0.3",
+    "fastify": "^4.20.0",
+    "jsonwebtoken": "^9.0.0",
+    "nodemailer": "^6.9.4",
+    "socket.io": "^4.7.1"
+  }
+}
