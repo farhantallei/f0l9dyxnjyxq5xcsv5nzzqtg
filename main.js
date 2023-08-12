@@ -66,7 +66,7 @@ app_1.default.addHook('onClose', (_fastify, done) => {
     app_2.io.close();
     done();
 });
-app_1.default.listen({ port: env_1.PORT || 2134 }, (err, address) => {
+app_1.default.listen({ port: env_1.PORT || 2134, host: '0.0.0.0' }, (err, address) => {
     if (err) {
         console.error(err.message);
         return process.exit(1);
